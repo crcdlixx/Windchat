@@ -1,0 +1,38 @@
+{
+  "name": "windchat-backend",
+  "version": "1.0.0",
+  "description": "WindChat backend server",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "integrity-check": "node src/utils/integrityCheck.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "marked": "^12.0.0",
+    "multer": "^2.1.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^8.0.6",
+    "otpauth": "^9.5.1",
+    "pg": "^8.12.0",
+    "uuid": "^10.0.0",
+    "winston": "^3.13.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

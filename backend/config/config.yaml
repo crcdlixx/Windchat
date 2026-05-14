@@ -1,0 +1,39 @@
+# WindChat Server Configuration
+# This file can be mounted at /app/config/config.yaml in the Docker container
+
+server:
+  name: "WindChat"
+  port: 4000
+
+  # Registration settings
+  registration_open: true
+
+  # Maximum message retention (hours, hard cap at 24)
+  max_message_ttl_hours: 24
+  default_message_ttl_seconds: 3600
+
+  # File uploads
+  max_file_size_mb: 50
+
+storage:
+  # Options: "local", "minio", "s3"
+  type: "minio"
+
+  # For minio/s3:
+  # endpoint, access_key, secret_key, bucket, region are set via environment variables
+
+  # For local storage:
+  local_dir: "/app/storage"
+
+security:
+  # JWT secrets are set via environment variables (JWT_SECRET, JWT_REFRESH_SECRET)
+  # access token lifetime in minutes
+  access_token_ttl_minutes: 15
+  # refresh token lifetime in days
+  refresh_token_ttl_days: 7
+
+  # Rate limiting
+  auth_rate_limit_per_15min: 10
+
+  # Code integrity check (logs warning if source is tampered)
+  integrity_check: true

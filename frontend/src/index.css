@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 浅色主题：深色文字 → 浅色背景 */
+  --wind-50:  30 41 59;    /* 最深文字 */
+  --wind-100: 51 65 85;    /* 主文字 */
+  --wind-200: 71 85 105;   /* 次要文字 */
+  --wind-300: 100 116 139; /* 辅助文字 */
+  --wind-400: 148 163 184; /* 占位文字 */
+  --wind-500: 59 130 246;  /* 蓝色强调 */
+  --wind-600: 37 99 235;   /* 主按钮蓝 */
+  --wind-700: 203 213 225; /* 边框/分隔线 */
+  --wind-800: 226 232 240; /* 输入框/卡片 */
+  --wind-900: 241 245 249; /* 面板背景 */
+  --wind-950: 248 250 252; /* 页面背景 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wind-50:  239 246 255;
+    --wind-100: 219 234 254;
+    --wind-200: 191 219 254;
+    --wind-300: 147 197 253;
+    --wind-400: 96 165 250;
+    --wind-500: 59 130 246;
+    --wind-600: 37 99 235;
+    --wind-700: 29 78 216;
+    --wind-800: 30 64 175;
+    --wind-900: 30 58 138;
+    --wind-950: 23 37 84;
+  }
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    @apply bg-wind-950 text-wind-100 font-sans;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #root { height: 100vh; display: flex; flex-direction: column; }
+}
+
+@layer components {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--wind-700)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgb(var(--wind-700)); border-radius: 2px; }
+
+  .prose-wind {
+    @apply text-wind-100;
+  }
+  .prose-wind p { @apply my-0.5; }
+  .prose-wind p:first-child { @apply mt-0; }
+  .prose-wind p:last-child { @apply mb-0; }
+  .prose-wind h1, .prose-wind h2, .prose-wind h3 {
+    @apply font-bold mt-2 mb-1;
+  }
+  .prose-wind h1 { @apply text-base; }
+  .prose-wind h2 { @apply text-sm; }
+  .prose-wind h3 { @apply text-sm; }
+  .prose-wind ul { @apply list-disc pl-4 my-1 space-y-0.5; }
+  .prose-wind ol { @apply list-decimal pl-4 my-1 space-y-0.5; }
+  .prose-wind li { @apply text-sm; }
+  .prose-wind code {
+    @apply bg-black/20 px-1 py-0.5 rounded text-sm font-mono;
+  }
+  .prose-wind pre {
+    @apply bg-black/25 p-3 rounded-lg overflow-x-auto my-1;
+  }
+  .prose-wind pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-wind a {
+    @apply underline opacity-90 hover:opacity-100;
+  }
+  .prose-wind blockquote {
+    @apply border-l-2 border-current pl-3 opacity-75 italic my-1;
+  }
+  .prose-wind hr { @apply border-current opacity-20 my-2; }
+  .prose-wind strong { @apply font-bold; }
+  .prose-wind em { @apply italic; }
+  .prose-wind table { @apply text-sm my-1 w-full; }
+  .prose-wind th { @apply font-semibold text-left pb-1 border-b border-current opacity-60; }
+  .prose-wind td { @apply py-0.5 pr-3; }
+}
