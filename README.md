@@ -52,11 +52,34 @@ UPDATE users SET role = 'superadmin' WHERE username = 'your_username';
 
 - [开发指南](docs/windchat_development_guide.md)
 - [发布检查清单](docs/release_checklist.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)
 - 架构和服务组成
 - 本地启动与 Docker 部署
 - Signal Protocol 和安全边界
 - 数据库结构与迁移
 - API 与 WebSocket 事件
+
+## 发布前检查
+
+推送到 GitHub 前建议至少运行：
+
+```bash
+docker compose config --quiet
+```
+
+```bash
+cd backend
+npm audit --omit=dev --registry=https://registry.npmjs.org
+```
+
+```bash
+cd frontend
+npm audit --omit=dev --registry=https://registry.npmjs.org
+npm run build
+```
+
+GitHub Actions 会在 push 和 pull request 上重复这些核心检查。
 
 ## 项目结构
 
@@ -69,16 +92,18 @@ nginx/     反向代理配置
 
 ## 当前安全边界
 
-WindChat 当前会加密私聊文本。私钥和 Signal session state 保存在浏览器本地，后端保存公钥预密钥包和加密后的消息 envelope。
+WindChat 当前只把一对一私聊的文本内容接入 Signal Protocol 会话层加密。私钥、self-copy 加密 key 和 Signal session state 保存在浏览器 `localStorage`，后端保存公钥预密钥包和加密后的消息 envelope。
 
 当前限制：
 
-- 群聊文本尚未接入 Signal 加密。
-- 附件文件内容尚未端到端加密。
+- 群聊文本当前仍以 legacy JSON payload 保存和转发，尚未接入端到端加密。
+- 附件文件内容尚未端到端加密，文件对象由本地存储、MinIO 或 S3 兼容存储保存。
+- 附件 key、消息类型、发送者、会话或群组 ID、TTL、时间戳等消息元数据对服务端可见；附件文件名也可能随消息 payload 保存。
+- 个人备忘录保存在服务端数据库中，不属于 Signal 加密链路。
 - 在新浏览器登录会生成新的 Signal identity，旧会话不会自动同步。
 
 更多实现细节和剩余风险请阅读 [开发指南](docs/windchat_development_guide.md)。
 
 ## License
 
-当前仓库尚未包含 license 文件。公开分发或用于私有/内部部署之外的场景前，建议先补充明确的许可证。
+WindChat is released under the [MIT License](LICENSE).

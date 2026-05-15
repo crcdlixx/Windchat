@@ -1,8 +1,7 @@
 node_modules
-npm-debug.log
+npm-debug.log*
 .env
 .env.*
+src_integrity.txt
 storage
-logs
-*.log
 coverage
