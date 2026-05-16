@@ -35,9 +35,9 @@ die() {
 
 random_secret() {
   if command -v openssl >/dev/null 2>&1; then
-    openssl rand -base64 48 | tr -d '\n'
+    openssl rand -hex 32 | tr -d '\n'
   else
-    dd if=/dev/urandom bs=48 count=1 2>/dev/null | base64 | tr -d '\n'
+    dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n'
   fi
 }
 
