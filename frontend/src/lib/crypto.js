@@ -13,14 +13,22 @@ const GROUP_KEY_PREFIX = 'wc_group_key'
 
 let signalReady = null
 
+function getCrypto() {
+  const crypto = window.crypto
+  if (!crypto?.subtle) {
+    throw new Error('web_crypto_unavailable')
+  }
+  return crypto
+}
+
 function getSubtle() {
-  return window.crypto.subtle
+  return getCrypto().subtle
 }
 
 async function ensureSignalReady() {
   if (!signalReady) {
     signalReady = initSignal().then(() => {
-      setWebCrypto(window.crypto)
+      setWebCrypto(getCrypto())
     })
   }
   return signalReady

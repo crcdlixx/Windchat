@@ -128,7 +128,9 @@ export default function ChatView() {
       }, 500)
     } catch (err) {
       const code = err.response?.data?.code
-      const message = code ? t(code) : (err.response?.data?.error || err.message || t('send_failed'))
+      const message = err.message === 'web_crypto_unavailable'
+        ? '当前访问环境不支持浏览器加密能力。请使用 HTTPS 域名访问，或仅在本机 localhost 测试。'
+        : code ? t(code) : (err.response?.data?.error || err.message || t('send_failed'))
       setSendError(message === 'recipient_signal_keys_outdated' ? t('recipient_signal_keys_outdated') : message)
       throw err
     }

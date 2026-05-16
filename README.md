@@ -104,6 +104,10 @@ WindChat 当前只把一对一私聊的文本内容接入 Signal Protocol 会话
 
 更多实现细节和剩余风险请阅读 [开发指南](docs/windchat_development_guide.md)。
 
+## Production HTTPS
+
+Production deployments must use HTTPS so browser encryption APIs are available. See [Production HTTPS Docker Deployment](docs/production_https_docker.md).
+
 ## License
 
 WindChat is released under the [MIT License](LICENSE).
