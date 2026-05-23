@@ -3,9 +3,15 @@ import { persist } from 'zustand/middleware'
 import api from '../lib/api'
 import {
   createAndStoreSignalIdentity,
+  clearVaultPassword,
+  decryptVaultSnapshot,
+  encryptVaultSnapshot,
   exportKeyBundle,
   generateIdentityKeys,
+  getVaultPassword,
   hasLocalSignalIdentity,
+  restoreVaultSnapshot,
+  setVaultPassword,
 } from '../lib/crypto'
 
 export const useAuthStore = create(
@@ -25,11 +31,14 @@ export const useAuthStore = create(
         const { accessToken, refreshToken, user } = res.data
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
         set({ accessToken, refreshToken, user })
+        setVaultPassword(password)
+        await get().restoreVault(password)
         await get().ensureSignalIdentity()
+        await get().backupVault()
         return user
       },
 
-      async completeTotpChallenge(challengeToken, totpCode) {
+      async completeTotpChallenge(challengeToken, totpCode, password) {
         const res = await api.post('/auth/totp-challenge', {
           challenge_token: challengeToken,
           totp_code: totpCode,
@@ -37,7 +46,10 @@ export const useAuthStore = create(
         const { accessToken, refreshToken, user } = res.data
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
         set({ accessToken, refreshToken, user })
+        if (password) setVaultPassword(password)
+        await get().restoreVault(password || getVaultPassword())
         await get().ensureSignalIdentity()
+        await get().backupVault()
         return user
       },
 
@@ -60,6 +72,8 @@ export const useAuthStore = create(
         // Store private keys locally (never leaves device)
         localStorage.setItem(`wc_identity_${user.id}`, JSON.stringify(bundle.local_private))
         set({ accessToken, refreshToken, user })
+        setVaultPassword(password)
+        await get().backupVault(password)
         return user
       },
 
@@ -77,6 +91,7 @@ export const useAuthStore = create(
         const { refreshToken } = get()
         try { await api.post('/auth/logout', { refreshToken }) } catch {}
         delete api.defaults.headers.common['Authorization']
+        clearVaultPassword()
         set({ accessToken: null, refreshToken: null, user: null })
       },
 
@@ -98,6 +113,36 @@ export const useAuthStore = create(
           signed_prekey: bundle.signed_prekey,
           one_time_prekeys: bundle.one_time_prekeys,
         })
+        await get().backupVault()
+      },
+
+      async restoreVault(password = getVaultPassword()) {
+        const { user } = get()
+        if (!user?.id || !password) return false
+
+        try {
+          const res = await api.get('/vault')
+          const vault = typeof res.data?.vault === 'string' ? JSON.parse(res.data.vault) : res.data?.vault
+          if (!vault) return false
+          const snapshot = await decryptVaultSnapshot(user.id, password, vault)
+          restoreVaultSnapshot(user.id, snapshot)
+          return true
+        } catch {
+          return false
+        }
+      },
+
+      async backupVault(password = getVaultPassword()) {
+        const { user } = get()
+        if (!user?.id || !password) return false
+
+        try {
+          const vault = await encryptVaultSnapshot(user.id, password)
+          await api.put('/vault', { vault })
+          return true
+        } catch {
+          return false
+        }
       },
 
       async loadProfile() {

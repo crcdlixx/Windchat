@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { useClickOutside } from '../lib/hooks'
 import { t } from '../lib/i18n'
+import { getOrCreateGroupKey } from '../lib/crypto'
 import { X, Trash2, VolumeX, UserMinus, UserPlus, Search, QrCode, Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeCanvas } from 'qrcode.react'
@@ -23,11 +24,10 @@ export default function GroupSettingsModal({ groupId, onClose }) {
   const [inviteResults, setInviteResults] = useState([])
   const [inviteLoading, setInviteLoading] = useState(false)
   const [invitedIds, setInvitedIds] = useState(new Set())
+  const [joinUrl, setJoinUrl] = useState(`${window.location.origin}/join/group/${groupId}`)
 
   const closeModal = useCallback(onClose, [onClose])
   const modalRef = useClickOutside(closeModal)
-
-  const joinUrl = `${window.location.origin}/join/group/${groupId}`
 
   const downloadQR = () => {
     const canvas = document.querySelector('#group-qr-canvas')
@@ -45,6 +45,9 @@ export default function GroupSettingsModal({ groupId, onClose }) {
       setForm({ name: r.data.name, description: r.data.description, type: r.data.type, message_ttl_seconds: r.data.message_ttl_seconds })
     })
     api.get(`/groups/${groupId}/members`).then(r => setMembers(r.data))
+    getOrCreateGroupKey(groupId).then(key => {
+      setJoinUrl(`${window.location.origin}/join/group/${groupId}#key=${encodeURIComponent(key)}`)
+    }).catch(() => {})
   }, [groupId])
 
   const myRole = members.find(m => m.id === user?.id)?.role

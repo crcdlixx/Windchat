@@ -35,12 +35,20 @@ CREATE TABLE IF NOT EXISTS one_time_prekeys (
     UNIQUE(user_id, key_id)
 );
 
--- User persistent storage (1MB max plaintext notes)
+-- User persistent storage for client-encrypted notes
 CREATE TABLE IF NOT EXISTS user_storage (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     content TEXT DEFAULT '',
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT storage_size CHECK (octet_length(content) <= 10485760)
+);
+
+-- Client-encrypted key/session backup. Server stores only encrypted JSON.
+CREATE TABLE IF NOT EXISTS user_vaults (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    vault TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT vault_size CHECK (octet_length(vault) <= 10485760)
 );
 
 -- Groups / Channels

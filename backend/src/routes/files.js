@@ -5,6 +5,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { authenticateToken } = require('../middleware/auth');
 const { uploadFile, getFileObject, getLocalFilePath, STORAGE_TYPE } = require('../services/fileStorage');
+const { pool } = require('../db/pool');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -49,6 +50,28 @@ function createFileToken(userId, key) {
     );
 }
 
+async function canAccessFile(userId, key) {
+    const result = await pool.query(
+        `SELECT 1
+         FROM messages m
+         LEFT JOIN conversations c ON c.id=m.conversation_id
+         LEFT JOIN group_members gm ON gm.group_id=m.group_id AND gm.user_id=$1
+         LEFT JOIN groups g ON g.id=m.group_id
+         WHERE m.file_ref=$2
+           AND m.is_deleted=false
+           AND m.expires_at > NOW()
+           AND (
+             (m.conversation_id IS NOT NULL AND (c.user_a=$1 OR c.user_b=$1))
+             OR
+             (m.group_id IS NOT NULL AND gm.user_id IS NOT NULL AND g.is_dissolved=false)
+           )
+         LIMIT 1`,
+        [userId, key]
+    );
+
+    return result.rowCount > 0;
+}
+
 function authenticateFileRequest(req, res, next) {
     const queryToken = req.query.token;
     if (queryToken) {
@@ -83,6 +106,10 @@ router.post('/upload', authenticateToken, uploadSingleFile, async (req, res) => 
 // Get signed/proxied URL for a file
 router.get('/url/:key', authenticateToken, validateFileKey, async (req, res) => {
     try {
+        if (!(await canAccessFile(req.user.id, req.params.key))) {
+            return res.status(403).json({ error: 'File access denied' });
+        }
+
         const token = createFileToken(req.user.id, req.params.key);
         return res.json({ url: `/api/files/${encodeURIComponent(req.params.key)}?token=${encodeURIComponent(token)}` });
     } catch (err) {
@@ -93,6 +120,10 @@ router.get('/url/:key', authenticateToken, validateFileKey, async (req, res) => 
 
 // Serve local files
 router.get('/:key', validateFileKey, authenticateFileRequest, async (req, res) => {
+    if (!(await canAccessFile(req.user.id, req.params.key))) {
+        return res.status(403).json({ error: 'File access denied' });
+    }
+
     if (STORAGE_TYPE === 'local') {
         const filePath = getLocalFilePath(req.params.key);
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });

@@ -4,13 +4,13 @@
 
 :root {
   /* 浅色主题：深色文字 → 浅色背景 */
-  --wind-50:  30 41 59;    /* 最深文字 */
-  --wind-100: 51 65 85;    /* 主文字 */
-  --wind-200: 71 85 105;   /* 次要文字 */
-  --wind-300: 100 116 139; /* 辅助文字 */
-  --wind-400: 148 163 184; /* 占位文字 */
-  --wind-500: 59 130 246;  /* 蓝色强调 */
-  --wind-600: 37 99 235;   /* 主按钮蓝 */
+  --wind-50:  15 23 42;    /* 最深文字 */
+  --wind-100: 30 41 59;    /* 主文字 */
+  --wind-200: 51 65 85;    /* 次要文字 */
+  --wind-300: 71 85 105;   /* 辅助文字 */
+  --wind-400: 71 85 105;   /* 占位文字 */
+  --wind-500: 29 78 216;   /* 蓝色强调 */
+  --wind-600: 30 64 175;   /* 主按钮蓝 */
   --wind-700: 203 213 225; /* 边框/分隔线 */
   --wind-800: 226 232 240; /* 输入框/卡片 */
   --wind-900: 241 245 249; /* 面板背景 */
@@ -30,6 +30,23 @@
     --wind-800: 30 64 175;
     --wind-900: 30 58 138;
     --wind-950: 23 37 84;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .text-wind-500 {
+    --tw-text-opacity: 1;
+    color: rgb(147 197 253 / var(--tw-text-opacity, 1));
+  }
+
+  .text-wind-600 {
+    --tw-text-opacity: 1;
+    color: rgb(191 219 254 / var(--tw-text-opacity, 1));
+  }
+
+  .placeholder-wind-600::placeholder {
+    --tw-placeholder-opacity: 1;
+    color: rgb(147 197 253 / var(--tw-placeholder-opacity, 1));
   }
 }
 
@@ -88,4 +105,32 @@
   .prose-wind table { @apply text-sm my-1 w-full; }
   .prose-wind th { @apply font-semibold text-left pb-1 border-b border-current opacity-60; }
   .prose-wind td { @apply py-0.5 pr-3; }
+
+  .message-prose-own,
+  .message-prose-own :where(p, h1, h2, h3, ul, ol, li, blockquote, table, th, td, strong, em, a) {
+    color: rgb(255 255 255 / 1);
+  }
+
+  .message-prose-own :where(code) {
+    color: rgb(255 255 255 / 1);
+    background-color: rgb(255 255 255 / 0.18);
+  }
+
+  .message-prose-own :where(pre) {
+    background-color: rgb(15 23 42 / 0.24);
+  }
+
+  .mobile-sidebar-trigger {
+    top: max(0.75rem, calc(env(safe-area-inset-top, 0px) + 0.75rem));
+    left: max(0.75rem, calc(env(safe-area-inset-left, 0px) + 0.75rem));
+  }
+
+  @media (max-width: 767px) {
+    .mobile-toolbar-safe {
+      height: calc(3.5rem + env(safe-area-inset-top, 0px)) !important;
+      min-height: calc(3.5rem + env(safe-area-inset-top, 0px)) !important;
+      padding-top: env(safe-area-inset-top, 0px) !important;
+      padding-left: max(3.5rem, calc(env(safe-area-inset-left, 0px) + 3.5rem)) !important;
+    }
+  }
 }

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useChatStore } from '../stores/chatStore'
 import { useAuthStore } from '../stores/authStore'
 import { useClickOutside } from '../lib/hooks'
-import { decryptMessage } from '../lib/crypto'
+import { decryptFileBlob, decryptGroupMessage, decryptMessage } from '../lib/crypto'
 import { t, isZh } from '../lib/i18n'
 import { Paperclip, Trash2, Info } from 'lucide-react'
 import { sendWsMessage } from '../lib/websocket'
@@ -18,11 +18,18 @@ function renderMarkdown(text) {
   return DOMPurify.sanitize(marked.parse(text || ''))
 }
 
-function payloadMeta(encryptedPayload) {
+function parsePlainPayload(value) {
   try {
-    return JSON.parse(encryptedPayload)
+    const parsed = JSON.parse(value)
+    return {
+      text: parsed.text || '',
+      file: parsed.file || null,
+    }
   } catch {
-    return {}
+    return {
+      text: value || '',
+      file: null,
+    }
   }
 }
 
@@ -33,6 +40,7 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
   const [attachmentUrl, setAttachmentUrl] = useState('')
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState('')
+  const [fileMeta, setFileMeta] = useState(null)
 
   const closeInfo = useCallback(() => setShowInfo(false), [])
   const infoRef = useClickOutside(closeInfo)
@@ -55,42 +63,54 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
     let cancelled = false
     setText('')
     setFileName('')
+    setFileMeta(null)
 
     if (type === 'dm') {
-      const meta = payloadMeta(message.encrypted_payload)
       decryptMessage(user?.id, message.sender_id, message.encrypted_payload)
         .then(plain => {
           if (cancelled) return
-          if (meta.file_name) setFileName(meta.file_name)
-          setText(plain)
+          const parsed = parsePlainPayload(plain)
+          setText(parsed.text)
+          setFileMeta(parsed.file)
+          setFileName(parsed.file?.name || '')
         })
         .catch(() => {
           if (!cancelled) setText(t('decryption_failed'))
         })
     } else {
-      try {
-        const env = JSON.parse(message.encrypted_payload)
-        setText(env.text || '[Encrypted]')
-        setFileName(env.file_name || '')
-      } catch {
-        setText(message.encrypted_payload || '')
-      }
+      decryptGroupMessage(chatId, message.encrypted_payload)
+        .then(plain => {
+          if (cancelled) return
+          const parsed = parsePlainPayload(plain)
+          setText(parsed.text)
+          setFileMeta(parsed.file)
+          setFileName(parsed.file?.name || '')
+        })
+        .catch(() => {
+          if (!cancelled) setText(t('decryption_failed'))
+        })
     }
 
     return () => {
       cancelled = true
     }
-  }, [message.encrypted_payload, message.sender_id, type, user?.id])
+  }, [message.encrypted_payload, message.sender_id, type, chatId, user?.id])
 
   useEffect(() => {
     let cancelled = false
     setAttachmentUrl('')
 
-    if (message.message_type !== 'image' || !message.file_ref) return undefined
+    if (message.message_type !== 'image' || !message.file_ref || !fileMeta) return undefined
+
+    let objectUrl = ''
 
     getFileUrl()
-      .then(url => {
-        if (!cancelled) setAttachmentUrl(url)
+      .then(url => api.get(url, { responseType: 'blob', baseURL: '' }))
+      .then(res => decryptFileBlob(res.data, fileMeta))
+      .then(blob => {
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(blob)
+        setAttachmentUrl(objectUrl)
       })
       .catch(() => {
         if (!cancelled) setAttachmentUrl('')
@@ -98,12 +118,18 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
 
     return () => {
       cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [message.message_type, message.file_ref, getFileUrl])
+  }, [message.message_type, message.file_ref, fileMeta, getFileUrl])
 
   const openFile = async () => {
-    const url = attachmentUrl || await getFileUrl()
-    window.open(url, '_blank', 'noopener,noreferrer')
+    if (!fileMeta) return
+    const url = await getFileUrl()
+    const res = await api.get(url, { responseType: 'blob', baseURL: '' })
+    const blob = await decryptFileBlob(res.data, fileMeta)
+    const objectUrl = URL.createObjectURL(blob)
+    window.open(objectUrl, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
   }
 
   return (
@@ -140,7 +166,10 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
           )}
 
           {message.message_type === 'file' && message.file_ref && (
-            <button onClick={openFile} className="flex items-center gap-2 text-wind-300 hover:text-wind-100 text-sm">
+            <button
+              onClick={openFile}
+              className={`flex items-center gap-2 text-sm ${isOwn ? 'text-white/90 hover:text-white' : 'text-wind-300 hover:text-wind-100'}`}
+            >
               <Paperclip size={14} />
               <span className="break-all">{fileName || t('download_attachment')}</span>
             </button>
@@ -148,13 +177,13 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
 
           {text && (
             <div
-              className="prose-wind text-sm break-words"
+              className={`prose-wind text-sm break-words ${isOwn ? 'message-prose-own' : ''}`}
               dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
             />
           )}
 
           <div className="flex items-center justify-end gap-1 mt-1">
-            <span className={`text-xs ${isOwn ? 'text-wind-200/70' : 'text-wind-500'} ${expiringSoon ? 'text-orange-400' : ''}`}>
+            <span className={`text-xs ${isOwn ? 'text-white/75' : 'text-wind-500'} ${expiringSoon ? 'text-orange-400' : ''}`}>
               {expiringSoon
                 ? t('expires_in', `${Math.ceil(timeLeft / 60000)}m`)
                 : formatDistanceToNow(new Date(message.created_at), { addSuffix: true, locale: isZh() ? zhCN : undefined })}

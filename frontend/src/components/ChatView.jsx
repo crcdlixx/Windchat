@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { sendWsMessage } from '../lib/websocket'
-import { encryptMessage, hasSignalSession } from '../lib/crypto'
+import { encryptFile, encryptGroupMessage, encryptMessage, hasSignalSession } from '../lib/crypto'
 import { t } from '../lib/i18n'
 import api from '../lib/api'
 import MessageBubble from './MessageBubble'
@@ -14,6 +14,7 @@ export default function ChatView() {
   const { type, id } = useParams()
   const user = useAuthStore(s => s.user)
   const ensureSignalIdentity = useAuthStore(s => s.ensureSignalIdentity)
+  const backupVault = useAuthStore(s => s.backupVault)
   const messages = useChatStore(s => s.messages[`${type}:${id}`] || [])
   const typing = useChatStore(s => s.typing[`${type}:${id}`] || new Set())
   const loadMessages = useChatStore(s => s.loadMessages)
@@ -86,17 +87,25 @@ export default function ChatView() {
     let messageType = 'text'
 
     try {
+      let fileMeta = null
       if (file) {
+        const encrypted = await encryptFile(file)
         const fd = new FormData()
-        fd.append('file', file)
+        fd.append('file', encrypted.blob, file.name)
         const res = await api.post('/files/upload', fd)
         fileRef = res.data.key
-        fileName = res.data.name || file.name
+        fileMeta = encrypted.meta
+        fileName = encrypted.meta.name
         messageType = file.type.startsWith('image/') ? 'image' : 'file'
       }
 
-      let payload = JSON.stringify({ text: text || '', file_name: fileName, v: 0 })
-      if (type === 'dm' && text) {
+      const plainPayload = JSON.stringify({
+        text: text || '',
+        file: fileMeta,
+      })
+
+      let payload
+      if (type === 'dm') {
         const partnerId = chatInfo?.partner_id
         if (!partnerId) return
 
@@ -104,13 +113,11 @@ export default function ChatView() {
         const bundle = await hasSignalSession(user.id, partnerId)
           ? { user_id: partnerId }
           : (await api.get(`/keys/${partnerId}/bundle`)).data
-        const encryptedText = await encryptMessage(user.id, bundle, text)
-        if (fileName) {
-          const env = JSON.parse(encryptedText)
-          payload = JSON.stringify({ ...env, file_name: fileName })
-        } else {
-          payload = encryptedText
-        }
+        payload = await encryptMessage(user.id, bundle, plainPayload)
+        await backupVault()
+      } else if (type === 'group') {
+        payload = await encryptGroupMessage(id, plainPayload)
+        await backupVault()
       }
 
       const sent = sendWsMessage({
@@ -134,7 +141,7 @@ export default function ChatView() {
       setSendError(message === 'recipient_signal_keys_outdated' ? t('recipient_signal_keys_outdated') : message)
       throw err
     }
-  }, [type, id, chatInfo, user?.id, ensureSignalIdentity, loadMessages])
+  }, [type, id, chatInfo, user?.id, ensureSignalIdentity, backupVault, loadMessages])
 
   const handleTyping = useCallback((isTyping) => {
     sendWsMessage({

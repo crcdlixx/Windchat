@@ -47,7 +47,7 @@ WindChat 是一个自托管 Web 聊天应用，当前代码采用：
 - 文件层：支持 `local`、`minio`、`s3` 三种对象存储模式。
 - 部署层：Docker Compose 编排 PostgreSQL、MinIO、backend、frontend、nginx。
 
-**重要提醒：** 当前私聊文本链路已经接入 Signal Protocol 会话层，前端在发送前完成加密，后端只保存和转发 `encrypted_payload` envelope。群聊文本仍沿用 legacy JSON payload，附件文件内容也尚未做端到端加密；生产安全承诺需要明确这些边界。
+**重要提醒：** 当前私聊内容已经接入 Signal Protocol 会话层；群聊消息、附件内容和个人备忘录也会在浏览器端加密后再交给后端保存或转发。后端仍可见消息类型、发送者、会话或群组 ID、TTL、时间戳、附件对象 key 和密文大小等元数据；群聊使用共享 AES-GCM key，不是完整 Signal Sender Keys 设备模型。
 
 默认 Docker 配置使用 `local` 文件存储。只有在 `.env` 中设置 `STORAGE_TYPE=minio` 并使用 `docker compose --profile minio up -d` 时，才会启动和使用内置 MinIO。
 
@@ -347,7 +347,7 @@ wss://host/ws?token=<accessToken>
 2. 前端调用 `encryptMessage` 生成 Signal encrypted envelope，并附带一份本机 local self-copy，便于发送者刷新后读取自己的消息。
 3. 客户端发送 `message:send`。
 4. 后端根据 `conversation_id` 或 `group_id` 检查成员资格。
-5. 群组消息会额外检查禁言状态。当前群聊文本仍是 legacy JSON payload。
+5. 群组消息会额外检查禁言状态，并要求 `windchat-group-aes-gcm` 加密 payload。
 6. 后端计算有效 TTL，不能超过环境变量 `MAX_MESSAGE_TTL_HOURS`。
 7. `services/messageService.js` 插入 `messages` 表。
 8. 后端把 `message:new` 广播给会话双方或群组成员。
@@ -400,7 +400,7 @@ Nginx 根配置设置了 `client_max_body_size 50m`，需要与 `MAX_FILE_SIZE_M
 
 ### 个人备忘录
 
-`backend/src/routes/storage.js` 实现个人服务端明文备忘录：
+`backend/src/routes/storage.js` 保存个人备忘录的客户端加密 payload：
 
 - `GET /storage` 返回当前用户内容。
 - `PUT /storage` 保存内容。
@@ -543,14 +543,14 @@ UPDATE users SET role='superadmin' WHERE username='your_username';
 - 私聊发送时通过 `SessionBuilder.processPreKey` 建立会话，再用 `SessionCipher.encrypt` 生成 Signal envelope。
 - 私聊接收时根据 envelope type 调用 `decryptPreKeyWhisperMessage` 或 `decryptWhisperMessage`。
 - 为发送者保存 local self-copy。Signal 密文面向接收方设备，发送端不能直接用同一份密文解出自己的历史消息，因此 self-copy 使用本地随机 key 加密，仍不上传明文。
-- 保留 legacy payload 解析，用于读取旧消息和当前群聊消息。
+- 支持群聊 AES-GCM payload、附件 AES-GCM blob、个人备忘录 AES-GCM payload，以及用户密码派生 vault key 的本地密钥备份/恢复。
 
 当前限制：
 
-- Signal Protocol 只接入私聊文本。
-- 群聊文本仍需设计 Sender Keys 或独立群密钥分发、轮换与成员移除策略。
-- 文件附件内容尚未端到端加密。
-- 多设备登录没有密钥备份/同步；新浏览器登录会发布新的 identity bundle，旧会话需要重新建立。
+- Signal Protocol 只用于私聊；群聊当前使用共享群 key，不具备完整 Sender Keys 的设备级成员管理。
+- 群 key 通过浏览器本地存储、vault 备份和邀请链接 hash 分发；成员移除后的 key 轮换策略仍需继续完善。
+- 附件内容已端到端加密，但对象 key、密文大小和下载授权元数据仍对服务端可见。
+- 多设备依赖 vault 恢复本地密钥材料；没有可解密 vault 时，新浏览器登录会发布新的 identity bundle，旧会话需要重新建立。
 
 ### 国际化与文案
 

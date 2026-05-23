@@ -18,6 +18,7 @@ const storageRoutes = require('./routes/storage');
 const adminRoutes = require('./routes/admin');
 const keysRoutes = require('./routes/keys');
 const fileRoutes = require('./routes/files');
+const vaultRoutes = require('./routes/vault');
 
 const app = express();
 const server = http.createServer(app);
@@ -55,6 +56,7 @@ app.use('/storage', storageRoutes);
 app.use('/admin', adminRoutes);
 app.use('/keys', keysRoutes);
 app.use('/files', fileRoutes);
+app.use('/vault', vaultRoutes);
 
 // Health + integrity check
 app.get('/health', async (req, res) => {

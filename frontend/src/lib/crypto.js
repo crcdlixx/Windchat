@@ -10,6 +10,9 @@ import initSignal, {
 const SIGNAL_DEVICE_ID = 1
 const PREKEY_BATCH_SIZE = 25
 const GROUP_KEY_PREFIX = 'wc_group_key'
+const NOTES_KEY_PREFIX = 'wc_notes_key'
+const VAULT_PASSWORD_KEY = 'wc_vault_password'
+const VAULT_KDF_ITERATIONS = 250000
 
 let signalReady = null
 
@@ -105,6 +108,18 @@ function getJson(key) {
 
 function setJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value))
+}
+
+function randomB64(bytes = 32) {
+  return buf2b64(window.crypto.getRandomValues(new Uint8Array(bytes)).buffer)
+}
+
+function parseJsonMaybe(value) {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
 }
 
 function keyPairToJson(keyPair) {
@@ -392,9 +407,6 @@ function parseLegacyPayload(encryptedPayload) {
 }
 
 export async function decryptMessage(myUserId, senderUserId, encryptedPayload) {
-  const legacy = parseLegacyPayload(encryptedPayload)
-  if (legacy !== null) return legacy
-
   try {
     const env = JSON.parse(encryptedPayload)
     if (env.protocol !== 'signal' || env.v !== 3) return '[Encrypted]'
@@ -426,10 +438,39 @@ function setGroupKey(groupId, key) {
   localStorage.setItem(`${GROUP_KEY_PREFIX}_${groupId}`, key)
 }
 
+function notesKeyName(userId) {
+  return `${NOTES_KEY_PREFIX}_${userId}`
+}
+
+function getNotesKey(userId) {
+  return localStorage.getItem(notesKeyName(userId))
+}
+
+function setNotesKey(userId, key) {
+  localStorage.setItem(notesKeyName(userId), key)
+}
+
+function listLocalStorage(prefix) {
+  const items = {}
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i)
+    if (key?.startsWith(prefix)) items[key] = localStorage.getItem(key)
+  }
+  return items
+}
+
 export async function generateGroupKey() {
   const key = await getSubtle().generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
   const raw = await getSubtle().exportKey('raw', key)
   return buf2b64(raw)
+}
+
+export function storeGroupKey(groupId, key) {
+  if (groupId && key) setGroupKey(groupId, key)
+}
+
+export function readGroupKey(groupId) {
+  return getGroupKey(groupId)
 }
 
 export async function getOrCreateGroupKey(groupId) {
@@ -456,9 +497,6 @@ export async function encryptGroupMessage(groupId, plaintext) {
 }
 
 export async function decryptGroupMessage(groupId, encryptedPayload) {
-  const legacy = parseLegacyPayload(encryptedPayload)
-  if (legacy !== null) return legacy
-
   try {
     const env = JSON.parse(encryptedPayload)
     if (env.protocol !== 'windchat-group-aes-gcm') return '[Encrypted]'
@@ -476,4 +514,163 @@ export async function decryptGroupMessage(groupId, encryptedPayload) {
   } catch {
     return '[Decryption failed]'
   }
+}
+
+export async function encryptFile(file) {
+  const keyB64 = randomB64(32)
+  const iv = window.crypto.getRandomValues(new Uint8Array(12))
+  const key = await getSubtle().importKey('raw', b642buf(keyB64), { name: 'AES-GCM', length: 256 }, false, ['encrypt'])
+  const ct = await getSubtle().encrypt({ name: 'AES-GCM', iv }, key, await file.arrayBuffer())
+
+  return {
+    blob: new Blob([ct], { type: 'application/octet-stream' }),
+    meta: {
+      v: 1,
+      alg: 'AES-GCM',
+      key: keyB64,
+      iv: buf2b64(iv.buffer),
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+    },
+  }
+}
+
+export async function decryptFileBlob(blob, meta) {
+  if (!meta?.key || !meta?.iv) throw new Error('Missing encrypted file metadata')
+  const key = await getSubtle().importKey('raw', b642buf(meta.key), { name: 'AES-GCM', length: 256 }, false, ['decrypt'])
+  const plain = await getSubtle().decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(b642buf(meta.iv)) },
+    key,
+    await blob.arrayBuffer()
+  )
+  return new Blob([plain], { type: meta.type || 'application/octet-stream' })
+}
+
+async function encryptWithRawKey(keyB64, plaintext, extra = {}) {
+  const key = await getSubtle().importKey('raw', b642buf(keyB64), { name: 'AES-GCM', length: 256 }, false, ['encrypt'])
+  const iv = window.crypto.getRandomValues(new Uint8Array(12))
+  const ct = await getSubtle().encrypt({ name: 'AES-GCM', iv }, key, stringToArrayBuffer(plaintext))
+  return JSON.stringify({
+    v: 1,
+    alg: 'AES-GCM',
+    iv: buf2b64(iv.buffer),
+    ct: buf2b64(ct),
+    ...extra,
+  })
+}
+
+async function decryptWithRawKey(keyB64, encryptedPayload) {
+  const env = typeof encryptedPayload === 'string' ? JSON.parse(encryptedPayload) : encryptedPayload
+  const key = await getSubtle().importKey('raw', b642buf(keyB64), { name: 'AES-GCM', length: 256 }, false, ['decrypt'])
+  const plain = await getSubtle().decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(b642buf(env.iv)) },
+    key,
+    b642buf(env.ct)
+  )
+  return arrayBufferToString(plain)
+}
+
+export async function getOrCreateNotesKey(userId) {
+  const existing = getNotesKey(userId)
+  if (existing) return existing
+  const key = randomB64(32)
+  setNotesKey(userId, key)
+  return key
+}
+
+export async function encryptNotes(userId, content) {
+  const key = await getOrCreateNotesKey(userId)
+  return encryptWithRawKey(key, content || '', { protocol: 'windchat-notes-aes-gcm' })
+}
+
+export async function decryptNotes(userId, encryptedPayload) {
+  if (!encryptedPayload) return ''
+  const env = parseJsonMaybe(encryptedPayload)
+  if (env?.protocol !== 'windchat-notes-aes-gcm') return encryptedPayload
+  const key = getNotesKey(userId)
+  if (!key) return ''
+  return decryptWithRawKey(key, env)
+}
+
+export function setVaultPassword(password) {
+  if (password) sessionStorage.setItem(VAULT_PASSWORD_KEY, password)
+}
+
+export function getVaultPassword() {
+  return sessionStorage.getItem(VAULT_PASSWORD_KEY) || ''
+}
+
+export function clearVaultPassword() {
+  sessionStorage.removeItem(VAULT_PASSWORD_KEY)
+}
+
+async function deriveVaultKey(password, salt, userId) {
+  const material = await getSubtle().importKey(
+    'raw',
+    stringToArrayBuffer(`${userId}:${password}`),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  )
+  return getSubtle().deriveKey(
+    { name: 'PBKDF2', salt: b642buf(salt), iterations: VAULT_KDF_ITERATIONS, hash: 'SHA-256' },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+export function createVaultSnapshot(userId) {
+  return {
+    v: 1,
+    identity: localStorage.getItem(localKeyName(userId)),
+    signal: listLocalStorage(`${sessionPrefix(userId)}:`),
+    groups: listLocalStorage(`${GROUP_KEY_PREFIX}_`),
+    notesKey: localStorage.getItem(notesKeyName(userId)),
+  }
+}
+
+export function restoreVaultSnapshot(userId, snapshot) {
+  if (!snapshot || snapshot.v !== 1) return
+  if (snapshot.identity) localStorage.setItem(localKeyName(userId), snapshot.identity)
+  Object.entries(snapshot.signal || {}).forEach(([key, value]) => {
+    if (key.startsWith(`${sessionPrefix(userId)}:`) && typeof value === 'string') localStorage.setItem(key, value)
+  })
+  Object.entries(snapshot.groups || {}).forEach(([key, value]) => {
+    if (key.startsWith(`${GROUP_KEY_PREFIX}_`) && typeof value === 'string') localStorage.setItem(key, value)
+  })
+  if (snapshot.notesKey) localStorage.setItem(notesKeyName(userId), snapshot.notesKey)
+}
+
+export async function encryptVaultSnapshot(userId, password) {
+  const salt = randomB64(16)
+  const iv = window.crypto.getRandomValues(new Uint8Array(12))
+  const key = await deriveVaultKey(password, salt, userId)
+  const ct = await getSubtle().encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    stringToArrayBuffer(JSON.stringify(createVaultSnapshot(userId)))
+  )
+  return {
+    v: 1,
+    alg: 'AES-GCM',
+    kdf: 'PBKDF2-SHA256',
+    iterations: VAULT_KDF_ITERATIONS,
+    salt,
+    iv: buf2b64(iv.buffer),
+    ct: buf2b64(ct),
+  }
+}
+
+export async function decryptVaultSnapshot(userId, password, vault) {
+  if (!vault?.salt || !vault?.iv || !vault?.ct) return null
+  const key = await deriveVaultKey(password, vault.salt, userId)
+  const plain = await getSubtle().decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(b642buf(vault.iv)) },
+    key,
+    b642buf(vault.ct)
+  )
+  return JSON.parse(arrayBufferToString(plain))
 }

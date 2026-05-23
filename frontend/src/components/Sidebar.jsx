@@ -66,7 +66,7 @@ export default function Sidebar() {
       {isMobile && !open && (
         <button
           onClick={toggle}
-          className="fixed top-3 left-3 z-30 p-2 bg-wind-800 rounded-lg text-wind-300 hover:bg-wind-700 shadow-lg"
+          className="mobile-sidebar-trigger fixed z-30 p-2 bg-wind-800 rounded-lg text-wind-300 hover:bg-wind-700 shadow-lg"
         >
           <Menu size={20} />
         </button>

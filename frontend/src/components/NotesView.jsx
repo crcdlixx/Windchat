@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react'
 import api from '../lib/api'
+import { decryptNotes, encryptNotes } from '../lib/crypto'
+import { useAuthStore } from '../stores/authStore'
 import { t } from '../lib/i18n'
 import { Save, HardDrive } from 'lucide-react'
 
 export default function NotesView() {
+  const user = useAuthStore(s => s.user)
+  const backupVault = useAuthStore(s => s.backupVault)
   const [content, setContent] = useState('')
   const [saved, setSaved] = useState(true)
   const [bytes, setBytes] = useState(0)
   const MAX = 1048576
 
   useEffect(() => {
-    api.get('/storage').then(r => {
-      setContent(r.data.content || '')
-      setBytes(new TextEncoder().encode(r.data.content || '').length)
+    if (!user?.id) return
+    api.get('/storage').then(async r => {
+      const plain = await decryptNotes(user.id, r.data.content || '')
+      setContent(plain)
+      setBytes(new TextEncoder().encode(plain).length)
     })
-  }, [])
+  }, [user?.id])
 
   const handleChange = (val) => {
     const b = new TextEncoder().encode(val).length
@@ -25,7 +31,9 @@ export default function NotesView() {
   }
 
   const handleSave = async () => {
-    await api.put('/storage', { content })
+    const encrypted = await encryptNotes(user.id, content)
+    await api.put('/storage', { content: encrypted })
+    await backupVault()
     setSaved(true)
   }
 
@@ -33,7 +41,7 @@ export default function NotesView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="h-14 border-b border-wind-800 bg-wind-900 flex items-center px-4 gap-3 shrink-0">
+      <div className="mobile-toolbar-safe h-14 border-b border-wind-800 bg-wind-900 flex items-center px-4 gap-3 shrink-0">
         <HardDrive size={18} className="text-wind-500" />
         <span className="text-wind-100 font-medium">{t('my_notes')}</span>
         <div className="flex-1" />

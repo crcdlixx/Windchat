@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useChatStore } from '../stores/chatStore'
+import { useAuthStore } from '../stores/authStore'
 import { t } from '../lib/i18n'
 import api from '../lib/api'
+import { getOrCreateGroupKey, storeGroupKey } from '../lib/crypto'
 import { X, Lock, Globe, Eye } from 'lucide-react'
 
 export default function NewGroupModal({ onClose }) {
   const navigate = useNavigate()
   const loadGroups = useChatStore(s => s.loadGroups)
+  const backupVault = useAuthStore(s => s.backupVault)
   const [form, setForm] = useState({
     name: '', description: '', type: 'private',
     password: '', is_temporary: false, duration_hours: 24,
@@ -21,8 +24,11 @@ export default function NewGroupModal({ onClose }) {
     setError('')
     try {
       const res = await api.post('/groups', form)
+      const groupKey = await getOrCreateGroupKey(res.data.id)
+      storeGroupKey(res.data.id, groupKey)
+      await backupVault()
       await loadGroups()
-      navigate(`/chat/group/${res.data.id}`)
+      navigate(`/chat/group/${res.data.id}#key=${encodeURIComponent(groupKey)}`)
       onClose()
     } catch (err) {
       setError(err.response?.data?.error || t('error'))

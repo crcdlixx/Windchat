@@ -4,11 +4,13 @@ import { useAuthStore } from '../stores/authStore'
 import { useChatStore } from '../stores/chatStore'
 import { t } from '../lib/i18n'
 import api from '../lib/api'
+import { storeGroupKey } from '../lib/crypto'
 
 export default function JoinGroupPage() {
   const { groupId } = useParams()
   const navigate = useNavigate()
   const user = useAuthStore(s => s.user)
+  const backupVault = useAuthStore(s => s.backupVault)
   const loadGroups = useChatStore(s => s.loadGroups)
   const [group, setGroup] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -27,7 +29,22 @@ export default function JoinGroupPage() {
     setJoining(true)
     setError('')
     try {
+      const key = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('key')
+      if (group?.my_role) {
+        if (key) {
+          storeGroupKey(groupId, key)
+          await backupVault()
+        }
+        await loadGroups()
+        navigate(`/chat/group/${groupId}`)
+        return
+      }
+
       await api.post(`/groups/${groupId}/join`, group?.type === 'password' ? { password } : {})
+      if (key) {
+        storeGroupKey(groupId, key)
+        await backupVault()
+      }
       await loadGroups()
       navigate(`/chat/group/${groupId}`)
     } catch (err) {

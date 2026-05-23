@@ -44,7 +44,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await completeTotpChallenge(totpChallenge.challenge_token, totpCode)
+      await completeTotpChallenge(totpChallenge.challenge_token, totpCode, form.password)
     } catch (err) {
       setError(err.response?.data?.error || t('login_failed'))
     } finally {

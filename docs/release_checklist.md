@@ -96,6 +96,6 @@ docker compose logs --since=5m backend nginx
 ## 当前发布说明
 
 - 私聊文本已经在浏览器中使用 Signal Protocol 会话加密。
-- 群聊文本、附件内容和个人备忘录尚未端到端加密。
-- Signal 私钥材料和会话状态保存在浏览器 localStorage。换浏览器或清空本地存储后会生成新的 identity bundle，旧会话可能需要重新建立。
+- 群聊文本、附件内容和个人备忘录已在浏览器端加密；服务端仍可见必要路由和存储元数据。
+- Signal 私钥材料、群 key、备忘录 key 和会话状态保存在浏览器 localStorage，并通过用户密码加密后的 vault 做恢复备份。换浏览器或清空本地存储且无法解开 vault 时，旧会话可能需要重新建立。
 - 项目目前还没有自动化测试套件，所以发布前的手动冒烟测试仍然必要。

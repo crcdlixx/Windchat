@@ -22,6 +22,59 @@ function broadcast(userIds, payload) {
     }
 }
 
+function parsePayload(payload) {
+    try {
+        return JSON.parse(payload);
+    } catch {
+        return null;
+    }
+}
+
+function isSignalPayload(payload) {
+    const env = parsePayload(payload);
+    return env?.protocol === 'signal' && env?.v === 3 && env?.signal;
+}
+
+function isGroupPayload(payload) {
+    const env = parsePayload(payload);
+    return env?.protocol === 'windchat-group-aes-gcm' && env?.v === 3 && env?.ct && env?.iv;
+}
+
+function validateMessageShape({ conversation_id, group_id, encrypted_payload, message_type, file_ref }) {
+    if (!encrypted_payload || typeof encrypted_payload !== 'string') {
+        return 'encrypted_payload required';
+    }
+
+    if (conversation_id && group_id) {
+        return 'Only one message target is allowed';
+    }
+
+    const type = message_type || 'text';
+    if (!['text', 'file', 'image'].includes(type)) {
+        return 'Invalid message type';
+    }
+
+    if (type === 'text' && file_ref) {
+        return 'Text messages cannot include file_ref';
+    }
+
+    if ((type === 'file' || type === 'image') && !file_ref) {
+        return 'file_ref required for attachment messages';
+    }
+
+    if (conversation_id) {
+        if (!isSignalPayload(encrypted_payload)) {
+            return 'Signal encrypted payload required for direct messages';
+        }
+    }
+
+    if (group_id && !isGroupPayload(encrypted_payload)) {
+        return 'Group encrypted payload required';
+    }
+
+    return null;
+}
+
 async function verifyRealtimeAccess(user) {
     const result = await pool.query(
         `SELECT u.email_verified, u.totp_enabled, s.key, s.value
@@ -145,8 +198,9 @@ async function handleMessage(user, msg, ws) {
 async function handleSendMessage(user, msg, ws) {
     const { conversation_id, group_id, encrypted_payload, message_type, file_ref, ttl_seconds } = msg;
 
-    if (!encrypted_payload) {
-        ws.send(JSON.stringify({ type: 'error', error: 'encrypted_payload required' }));
+    const validationError = validateMessageShape({ conversation_id, group_id, encrypted_payload, message_type, file_ref });
+    if (validationError) {
+        ws.send(JSON.stringify({ type: 'error', error: validationError }));
         return;
     }
 
@@ -168,7 +222,7 @@ async function handleSendMessage(user, msg, ws) {
         targetUserIds = [c.user_a, c.user_b];
     } else if (group_id) {
         const member = await pool.query(
-            'SELECT gm.role, gm.is_muted, gm.muted_until, g.message_ttl_seconds FROM group_members gm JOIN groups g ON gm.group_id=g.id WHERE gm.group_id=$1 AND gm.user_id=$2',
+            'SELECT gm.role, gm.is_muted, gm.muted_until, g.message_ttl_seconds, g.is_dissolved FROM group_members gm JOIN groups g ON gm.group_id=g.id WHERE gm.group_id=$1 AND gm.user_id=$2',
             [group_id, user.id]
         );
         if (!member.rows[0]) {
@@ -176,6 +230,10 @@ async function handleSendMessage(user, msg, ws) {
             return;
         }
         const m = member.rows[0];
+        if (m.is_dissolved) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Group is dissolved' }));
+            return;
+        }
         if (m.is_muted && (!m.muted_until || m.muted_until > new Date())) {
             ws.send(JSON.stringify({ type: 'error', error: 'You are muted' }));
             return;
@@ -256,12 +314,23 @@ async function handleTyping(user, msg) {
     let targetUserIds = [];
 
     if (conversation_id) {
-        const conv = await pool.query('SELECT user_a, user_b FROM conversations WHERE id=$1', [conversation_id]);
+        const conv = await pool.query(
+            'SELECT user_a, user_b FROM conversations WHERE id=$1 AND (user_a=$2 OR user_b=$2)',
+            [conversation_id, user.id]
+        );
         if (conv.rows[0]) targetUserIds = [conv.rows[0].user_a, conv.rows[0].user_b].filter(id => id !== user.id);
     } else if (group_id) {
-        const members = await pool.query('SELECT user_id FROM group_members WHERE group_id=$1', [group_id]);
-        targetUserIds = members.rows.map(r => r.user_id).filter(id => id !== user.id);
+        const member = await pool.query(
+            'SELECT 1 FROM group_members gm JOIN groups g ON gm.group_id=g.id WHERE gm.group_id=$1 AND gm.user_id=$2 AND g.is_dissolved=false',
+            [group_id, user.id]
+        );
+        if (member.rows[0]) {
+            const members = await pool.query('SELECT user_id FROM group_members WHERE group_id=$1', [group_id]);
+            targetUserIds = members.rows.map(r => r.user_id).filter(id => id !== user.id);
+        }
     }
+
+    if (targetUserIds.length === 0) return;
 
     broadcast(targetUserIds, {
         type: msg.type,
