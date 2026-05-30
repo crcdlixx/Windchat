@@ -20,7 +20,8 @@ router.get('/conversation/:id', authenticateToken, async (req, res) => {
     const result = await pool.query(
         `SELECT m.id, m.sender_id, m.encrypted_payload, m.message_type, m.file_ref,
                 m.ttl_seconds, m.expires_at, m.created_at,
-                u.username as sender_username, u.display_name as sender_display_name
+                u.username as sender_username, u.display_name as sender_display_name,
+                u.avatar_url as sender_avatar
          FROM messages m JOIN users u ON m.sender_id=u.id
          WHERE m.conversation_id=$1 AND m.is_deleted=false AND m.expires_at > NOW()
          ${before ? 'AND m.created_at < $3' : ''}
@@ -44,7 +45,8 @@ router.get('/group/:id', authenticateToken, async (req, res) => {
     const result = await pool.query(
         `SELECT m.id, m.sender_id, m.encrypted_payload, m.message_type, m.file_ref,
                 m.ttl_seconds, m.expires_at, m.created_at,
-                u.username as sender_username, u.display_name as sender_display_name
+                u.username as sender_username, u.display_name as sender_display_name,
+                u.avatar_url as sender_avatar
          FROM messages m JOIN users u ON m.sender_id=u.id
          WHERE m.group_id=$1 AND m.is_deleted=false AND m.expires_at > NOW()
          ${before ? 'AND m.created_at < $3' : ''}

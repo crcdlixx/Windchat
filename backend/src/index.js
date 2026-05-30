@@ -32,7 +32,7 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "blob:"],
+            imgSrc: ["'self'", "data:", "blob:", "http:", "https:"],
             connectSrc: ["'self'", "ws:", "wss:"],
             frameSrc: ["https://challenges.cloudflare.com"],
         }

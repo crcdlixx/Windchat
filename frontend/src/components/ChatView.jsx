@@ -35,6 +35,7 @@ export default function ChatView() {
         sub: `@${conv.partner_username}`,
         ttl: conv.message_ttl_seconds,
         partner_id: conv.partner_id,
+        avatar_url: conv.partner_avatar,
       } : null
     } else {
       const group = groups.find(g => g.id === id)

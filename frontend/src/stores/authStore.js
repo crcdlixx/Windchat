@@ -97,6 +97,10 @@ export const useAuthStore = create(
 
       setUser(user) { set({ user }) },
 
+      updateProfile(profile) {
+        set(state => ({ user: { ...state.user, ...profile } }))
+      },
+
       async ensureSignalIdentity() {
         const { user } = get()
         if (!user?.id) throw new Error('Not signed in')

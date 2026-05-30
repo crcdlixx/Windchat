@@ -3,6 +3,7 @@ import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { t } from '../lib/i18n'
 import { ShieldCheck, Users, Server, Settings, FileText, UsersRound } from 'lucide-react'
+import Avatar from './Avatar'
 
 function AdminStats() {
   const [stats, setStats] = useState(null)
@@ -69,9 +70,7 @@ function AdminUsers() {
       <div className="space-y-1">
         {users.map(u => (
           <div key={u.id} className="flex items-center gap-3 bg-wind-800 rounded-xl px-4 py-2.5">
-            <div className="w-8 h-8 rounded-full bg-wind-700 flex items-center justify-center text-sm font-bold text-wind-200 shrink-0">
-              {u.username[0].toUpperCase()}
-            </div>
+            <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" textClassName="text-sm" />
             <div className="flex-1 min-w-0">
               <div className="text-wind-200 text-sm font-medium">{u.username}</div>
               <div className="text-wind-500 text-xs">{u.role} · {u.is_banned ? `${t('banned')} ${u.ban_reason}` : t('active')}</div>

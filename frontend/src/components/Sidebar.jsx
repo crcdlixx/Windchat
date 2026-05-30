@@ -12,6 +12,7 @@ import {
 import NewChatModal from './NewChatModal'
 import NewGroupModal from './NewGroupModal'
 import ProfileModal from './ProfileModal'
+import Avatar from './Avatar'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -137,9 +138,7 @@ export default function Sidebar() {
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors
                 ${isActive(`/chat/dm/${conv.id}`) ? 'bg-wind-700' : 'hover:bg-wind-800'}`}
             >
-              <div className="w-9 h-9 rounded-full bg-wind-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                {(conv.partner_display_name || conv.partner_username || '?')[0].toUpperCase()}
-              </div>
+              <Avatar src={conv.partner_avatar} name={conv.partner_display_name || conv.partner_username} className="w-9 h-9" textClassName="text-sm" />
               <div className="min-w-0 flex-1">
                 <div className="text-wind-200 text-sm font-medium truncate">
                   {conv.partner_display_name || conv.partner_username}
@@ -200,10 +199,10 @@ export default function Sidebar() {
           <div className="flex items-center gap-2 px-3 py-2">
             <button
               onClick={() => setShowProfile(true)}
-              className="w-7 h-7 rounded-full bg-wind-600 flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 ring-wind-400 transition-all"
+              className="rounded-full hover:ring-2 ring-wind-400 transition-all"
               title={t('profile')}
             >
-              {(user?.display_name || user?.username || '?')[0].toUpperCase()}
+              <Avatar src={user?.avatar_url} name={user?.display_name || user?.username} className="w-7 h-7" textClassName="text-xs" />
             </button>
             <span className="text-wind-300 text-sm flex-1 truncate min-w-0">
               {user?.display_name || user?.username}

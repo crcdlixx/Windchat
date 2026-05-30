@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { t } from '../lib/i18n'
 import { Settings, Lock, Globe, Eye } from 'lucide-react'
 import GroupSettingsModal from './GroupSettingsModal'
+import Avatar from './Avatar'
 
 export default function ChatHeader({ chatInfo, type, id }) {
   const [showSettings, setShowSettings] = useState(false)
@@ -20,9 +21,13 @@ export default function ChatHeader({ chatInfo, type, id }) {
 
   return (
     <div className="mobile-toolbar-safe h-14 border-b border-wind-800 bg-wind-900 flex items-center px-3 gap-2 shrink-0 z-10">
-      <div className="w-9 h-9 rounded-full bg-wind-700 flex items-center justify-center text-wind-200 font-bold text-sm shrink-0">
-        {chatInfo.name?.[0]?.toUpperCase() || '?'}
-      </div>
+      {type === 'dm' ? (
+        <Avatar src={chatInfo.avatar_url} name={chatInfo.name} className="w-9 h-9" textClassName="text-sm" />
+      ) : (
+        <div className="w-9 h-9 rounded-full bg-wind-700 flex items-center justify-center text-wind-200 font-bold text-sm shrink-0">
+          {chatInfo.name?.[0]?.toUpperCase() || '?'}
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">

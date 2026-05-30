@@ -11,6 +11,7 @@ import DOMPurify from 'dompurify'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale/zh-CN'
 import api from '../lib/api'
+import Avatar from './Avatar'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -135,8 +136,8 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group mb-1`}>
       {!isOwn && (
-        <div className="w-7 h-7 rounded-full bg-wind-700 flex items-center justify-center text-wind-200 text-xs font-bold mr-2 mt-1 shrink-0">
-          {(message.sender_display_name || message.sender_username || '?')[0].toUpperCase()}
+        <div className="mr-2 mt-1">
+          <Avatar src={message.sender_avatar} name={message.sender_display_name || message.sender_username} className="w-7 h-7" textClassName="text-xs" />
         </div>
       )}
 

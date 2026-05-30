@@ -31,7 +31,7 @@ router.get('/users', async (req, res) => {
     const { q, page } = req.query;
     const offset = (parseInt(page) - 1 || 0) * 50;
     const result = await pool.query(
-        `SELECT id, username, display_name, role, is_banned, ban_reason, created_at, last_seen
+        `SELECT id, username, display_name, avatar_url, role, is_banned, ban_reason, created_at, last_seen
          FROM users ${q ? 'WHERE username ILIKE $3' : ''}
          ORDER BY created_at DESC LIMIT 50 OFFSET $1`,
         q ? [offset, 50, `%${q}%`] : [offset]

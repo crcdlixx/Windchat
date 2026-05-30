@@ -8,6 +8,7 @@ import { getOrCreateGroupKey } from '../lib/crypto'
 import { X, Trash2, VolumeX, UserMinus, UserPlus, Search, QrCode, Download } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeCanvas } from 'qrcode.react'
+import Avatar from './Avatar'
 
 export default function GroupSettingsModal({ groupId, onClose }) {
   const user = useAuthStore(s => s.user)
@@ -226,9 +227,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
             <div className="space-y-1">
               {members.map(m => (
                 <div key={m.id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-wind-800">
-                  <div className="w-8 h-8 rounded-full bg-wind-700 flex items-center justify-center text-wind-200 text-sm font-bold shrink-0">
-                    {(m.display_name || m.username)[0].toUpperCase()}
-                  </div>
+                  <Avatar src={m.avatar_url} name={m.display_name || m.username} className="w-8 h-8" textClassName="text-sm" />
                   <div className="flex-1 min-w-0">
                     <div className="text-wind-200 text-sm truncate">{m.display_name || m.username}</div>
                     <div className="text-wind-500 text-xs">{roleLabel(m.role)}{m.is_muted ? ` · ${t('muted')}` : ''}</div>
@@ -278,9 +277,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
                     )}
                     {inviteResults.map(u => (
                       <div key={u.id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-wind-800">
-                        <div className="w-8 h-8 rounded-full bg-wind-700 flex items-center justify-center text-wind-200 text-sm font-bold shrink-0">
-                          {(u.display_name || u.username)[0].toUpperCase()}
-                        </div>
+                        <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" textClassName="text-sm" />
                         <div className="flex-1 min-w-0">
                           <div className="text-wind-200 text-sm truncate">{u.display_name || u.username}</div>
                           <div className="text-wind-500 text-xs">@{u.username}</div>
