@@ -70,7 +70,7 @@ function AdminUsers() {
       <div className="space-y-1">
         {users.map(u => (
           <div key={u.id} className="flex items-center gap-3 bg-wind-800 rounded-xl px-4 py-2.5">
-            <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" textClassName="text-sm" />
+            <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" />
             <div className="flex-1 min-w-0">
               <div className="text-wind-200 text-sm font-medium">{u.username}</div>
               <div className="text-wind-500 text-xs">{u.role} · {u.is_banned ? `${t('banned')} ${u.ban_reason}` : t('active')}</div>

@@ -22,7 +22,7 @@ export default function ChatHeader({ chatInfo, type, id }) {
   return (
     <div className="mobile-toolbar-safe h-14 border-b border-wind-800 bg-wind-900 flex items-center px-3 gap-2 shrink-0 z-10">
       {type === 'dm' ? (
-        <Avatar src={chatInfo.avatar_url} name={chatInfo.name} className="w-9 h-9" textClassName="text-sm" />
+        <Avatar src={chatInfo.avatar_url} name={chatInfo.name} className="w-9 h-9" />
       ) : (
         <div className="w-9 h-9 rounded-full bg-wind-700 flex items-center justify-center text-wind-200 font-bold text-sm shrink-0">
           {chatInfo.name?.[0]?.toUpperCase() || '?'}

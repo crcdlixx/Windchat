@@ -90,7 +90,7 @@ function ProfileSection({ profile, setProfile }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Avatar src={form.avatar_url} name={displayName} className="w-14 h-14" textClassName="text-lg" />
+        <Avatar src={form.avatar_url} name={displayName} className="w-14 h-14" />
         <div className="min-w-0">
           <div className="text-wind-100 text-sm font-medium truncate">{displayName || profile?.username}</div>
           <div className="text-wind-500 text-xs truncate">@{profile?.username}</div>
@@ -252,7 +252,7 @@ function EmailSection({ user }) {
         {t('bind_email')}
       </div>
       {user.email_verified && (
-        <div className="text-wind-400 text-xs">{user.email} — <span className="text-green-400">{t('verified')}</span></div>
+        <div className="text-wind-400 text-xs">{user.email} �?<span className="text-green-400">{t('verified')}</span></div>
       )}
       {step === 0 ? (
         <>
@@ -450,7 +450,7 @@ export default function ProfileModal({ onClose }) {
         <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-6">
           {/* User info */}
           <div className="flex items-center gap-3">
-            <Avatar src={display.avatar_url} name={display.display_name || display.username} className="w-12 h-12" textClassName="text-lg" />
+            <Avatar src={display.avatar_url} name={display.display_name || display.username} className="w-12 h-12" />
             <div className="min-w-0">
               <div className="text-wind-100 font-medium truncate">{display.display_name || display.username}</div>
               <div className="text-wind-500 text-xs truncate">@{display.username} · {display.role}</div>

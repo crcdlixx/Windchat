@@ -138,7 +138,7 @@ export default function Sidebar() {
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-colors
                 ${isActive(`/chat/dm/${conv.id}`) ? 'bg-wind-700' : 'hover:bg-wind-800'}`}
             >
-              <Avatar src={conv.partner_avatar} name={conv.partner_display_name || conv.partner_username} className="w-9 h-9" textClassName="text-sm" />
+              <Avatar src={conv.partner_avatar} name={conv.partner_display_name || conv.partner_username} className="w-9 h-9" />
               <div className="min-w-0 flex-1">
                 <div className="text-wind-200 text-sm font-medium truncate">
                   {conv.partner_display_name || conv.partner_username}
@@ -202,7 +202,7 @@ export default function Sidebar() {
               className="rounded-full hover:ring-2 ring-wind-400 transition-all"
               title={t('profile')}
             >
-              <Avatar src={user?.avatar_url} name={user?.display_name || user?.username} className="w-7 h-7" textClassName="text-xs" />
+              <Avatar src={user?.avatar_url} name={user?.display_name || user?.username} className="w-7 h-7" />
             </button>
             <span className="text-wind-300 text-sm flex-1 truncate min-w-0">
               {user?.display_name || user?.username}

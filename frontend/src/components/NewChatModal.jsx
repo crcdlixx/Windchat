@@ -59,7 +59,7 @@ export default function NewChatModal({ onClose }) {
                 onClick={() => startChat(u)}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-wind-800 transition-colors text-left"
               >
-                <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" textClassName="text-sm" />
+                <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" />
                 <div>
                   <div className="text-wind-200 text-sm font-medium">{u.display_name || u.username}</div>
                   <div className="text-wind-500 text-xs">@{u.username}</div>

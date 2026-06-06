@@ -20,8 +20,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({})
 
-  // 邀请搜索状态
-  const [inviteQuery, setInviteQuery] = useState('')
+  // 邀请搜索状�?  const [inviteQuery, setInviteQuery] = useState('')
   const [inviteResults, setInviteResults] = useState([])
   const [inviteLoading, setInviteLoading] = useState(false)
   const [invitedIds, setInvitedIds] = useState(new Set())
@@ -156,7 +155,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
                   disabled={myRole !== 'owner'}
                 />
               </div>
-              {/* 二维码 - 公开/密码群组显示 */}
+              {/* 二维�?- 公开/密码群组显示 */}
               {(group?.type === 'public' || group?.type === 'password') && (
                 <div className="bg-wind-800/50 rounded-xl p-4 flex flex-col items-center gap-3">
                   <div className="flex items-center gap-2 text-wind-300 text-sm font-medium">
@@ -227,7 +226,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
             <div className="space-y-1">
               {members.map(m => (
                 <div key={m.id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-wind-800">
-                  <Avatar src={m.avatar_url} name={m.display_name || m.username} className="w-8 h-8" textClassName="text-sm" />
+                  <Avatar src={m.avatar_url} name={m.display_name || m.username} className="w-8 h-8" />
                   <div className="flex-1 min-w-0">
                     <div className="text-wind-200 text-sm truncate">{m.display_name || m.username}</div>
                     <div className="text-wind-500 text-xs">{roleLabel(m.role)}{m.is_muted ? ` · ${t('muted')}` : ''}</div>
@@ -247,7 +246,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
             </div>
           )}
 
-          {/* ── 邀请 tab ── */}
+          {/* ── 邀�?tab ── */}
           {tab === 'invite' && (
             <div>
               {myRole !== 'owner' && myRole !== 'moderator' ? (
@@ -277,7 +276,7 @@ export default function GroupSettingsModal({ groupId, onClose }) {
                     )}
                     {inviteResults.map(u => (
                       <div key={u.id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-wind-800">
-                        <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" textClassName="text-sm" />
+                        <Avatar src={u.avatar_url} name={u.display_name || u.username} className="w-8 h-8" />
                         <div className="flex-1 min-w-0">
                           <div className="text-wind-200 text-sm truncate">{u.display_name || u.username}</div>
                           <div className="text-wind-500 text-xs">@{u.username}</div>

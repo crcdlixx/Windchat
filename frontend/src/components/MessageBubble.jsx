@@ -137,7 +137,7 @@ export default function MessageBubble({ message, isOwn, type, chatId }) {
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group mb-1`}>
       {!isOwn && (
         <div className="mr-2 mt-1">
-          <Avatar src={message.sender_avatar} name={message.sender_display_name || message.sender_username} className="w-7 h-7" textClassName="text-xs" />
+          <Avatar src={message.sender_avatar} name={message.sender_display_name || message.sender_username} className="w-7 h-7" />
         </div>
       )}
 
